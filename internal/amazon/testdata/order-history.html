@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es-es">
+<head><title>Tus pedidos</title></head>
+<body>
+<div id="a-page">
+<div class="your-orders-content-container">
+  <div class="a-row a-spacing-medium">
+    <form action="/gp/css/order-history" method="get">
+      <span class="num-orders">23 pedidos</span> realizados en
+      <select name="timeFilter" id="time-filter" class="a-native-dropdown">
+        <option value="last30">últimos 30 días</option>
+        <option value="months-3">últimos 3 meses</option>
+        <option value="year-2026" selected>2026</option>
+        <option value="year-2025">2025</option>
+        <option value="year-2024">2024</option>
+        <option value="year-2019">2019</option>
+        <option value="archived">Pedidos archivados</option>
+      </select>
+    </form>
+  </div>
+
+  <div id="ordersContainer" class="a-section">
+
+    <div class="order-card js-order-card">
+      <div class="a-box-group a-spacing-base">
+        <div class="a-box a-color-offset-background order-header">
+          <div class="a-box-inner">
+            <div class="a-fixed-right-grid"><div class="a-fixed-right-grid-inner">
+              <div class="a-fixed-right-grid-col a-col-left">
+                <div class="a-row">
+                  <div class="a-column a-span3">
+                    <div class="a-row a-size-mini"><span class="a-color-secondary a-text-caps">Pedido realizado</span></div>
+                    <div class="a-row"><span class="a-size-base a-color-secondary">12 de septiembre de 2026</span></div>
+                  </div>
+                  <div class="a-column a-span2">
+                    <div class="a-row a-size-mini"><span class="a-color-secondary a-text-caps">Total</span></div>
+                    <div class="a-row"><span class="a-size-base a-color-secondary">45,98 €</span></div>
+                  </div>
+                  <div class="a-column a-span7 a-span-last yohtmlc-recipient">
+                    <div class="a-row a-size-mini"><span class="a-color-secondary a-text-caps">Enviar a</span></div>
+                    <div class="a-row"><span class="a-size-base a-color-secondary">Test Person</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="a-fixed-right-grid-col a-col-right">
+                <div class="a-row a-size-mini yohtmlc-order-id">
+                  <span class="a-color-secondary a-text-caps">Pedido n.º</span>
+                  <span class="a-color-secondary" dir="ltr">402-1234567-0000001</span>
+                </div>
+                <div class="a-row">
+                  <div class="yohtmlc-order-level-connections">
+                    <a class="a-link-normal" href="/gp/your-account/order-details?orderID=402-1234567-0000001&amp;ref_=ppx_yo2ov_dt_b_fed_order_details">Ver detalles del pedido</a>
+                    <i class="a-icon a-icon-text-separator"></i>
+                    <a class="a-link-normal a-popover-trigger" href="/gp/css/summary/print.html?orderID=402-1234567-0000001&amp;ref_=ppx_yo2ov_dt_b_invoice_o00" data-a-popover='{"url":"/gp/shared-cs/ajax/invoice/invoice.html?orderId=402-1234567-0000001&amp;relatedRequestId=ABCDEF123456&amp;isADriveNode=false","closeButton":false}'>Factura</a>
+                  </div>
+                </div>
+              </div>
+            </div></div>
+          </div>
+        </div>
+
+        <div class="a-box delivery-box">
+          <div class="a-box-inner">
+            <div class="a-fixed-right-grid"><div class="a-fixed-right-grid-inner">
+              <div class="a-fixed-right-grid-col a-col-left">
+                <div class="a-row"><div class="yohtmlc-shipment-status-primaryText"><span class="a-size-medium delivery-box__primary-text">Entregado el 14 de septiembre</span></div></div>
+                <div class="a-row"><span class="delivery-box__secondary-text">El paquete se entregó a la persona indicada.</span></div>
+
+                <div class="a-fixed-left-grid item-box"><div class="a-fixed-left-grid-inner">
+                  <div class="a-fixed-left-grid-col a-col-left">
+                    <div class="item-view-left-col-inner product-image">
+                      <a class="a-link-normal" href="/dp/B0TEST0001?ref_=ppx_yo2ov_dt_b_fed_image"><img alt="Cable USB-C" src="https://m.media-amazon.com/images/I/example1._SS142_.jpg"></a>
+                      <span class="product-image__qty">2</span>
+                    </div>
+                  </div>
+                  <div class="a-fixed-left-grid-col yohtmlc-item a-col-right">
+                    <div class="a-row"><a class="a-link-normal" href="/dp/B0TEST0001?ref_=ppx_yo2ov_dt_b_fed_product_details">Cable USB-C a USB-C 2 m, carga rápida 100 W</a></div>
+                    <div class="a-row"><span class="a-size-small a-color-secondary">Devolución o sustitución de artículos: hasta el 31 de enero de 2027</span></div>
+                    <div class="a-row">
+                      <span class="a-button a-button-base"><span class="a-button-inner"><a class="a-button-text" href="/dp/B0TEST0001?ref_=ppx_yo2ov_dt_b_fed_buy_again">Volver a comprar</a></span></span>
+                      <span class="a-button a-button-base"><span class="a-button-inner"><a class="a-button-text" href="/review/create-review?asin=B0TEST0001">Escribir una opinión</a></span></span>
+                    </div>
+                  </div>
+                </div></div>
+
+                <div class="a-fixed-left-grid item-box"><div class="a-fixed-left-grid-inner">
+                  <div class="a-fixed-left-grid-col a-col-left">
+                    <div class="item-view-left-col-inner product-image">
+                      <a class="a-link-normal" href="/dp/B0TEST0002?ref_=ppx_yo2ov_dt_b_fed_image"><img alt="Funda" src="https://m.media-amazon.com/images/I/example2._SS142_.jpg"></a>
+                    </div>
+                  </div>
+                  <div class="a-fixed-left-grid-col yohtmlc-item a-col-right">
+                    <div class="a-row"><a class="a-link-normal" href="/dp/B0TEST0002?ref_=ppx_yo2ov_dt_b_fed_product_details">Funda de silicona para mando, negra</a></div>
+                    <div class="a-row"><span class="a-size-small a-color-secondary">Devolución o sustitución de artículos: hasta el 31 de enero de 2027</span></div>
+                  </div>
+                </div></div>
+              </div>
+              <div class="a-fixed-right-grid-col a-col-right">
+                <div class="a-button-stack">
+                  <span class="a-button a-button-primary"><span class="a-button-inner"><a class="a-button-text" href="/gp/your-account/ship-track?orderId=402-1234567-0000001">Seguimiento del envío</a></span></span>
+                  <span class="a-button a-button-base"><span class="a-button-inner"><a class="a-button-text" href="/spr/returns/cart?orderId=402-1234567-0000001">Devolver o sustituir artículos</a></span></span>
+                  <span class="a-button a-button-base"><span class="a-button-inner"><a class="a-button-text" href="/gcx/-/gfhz/list/gift-ideas">Compartir regalo</a></span></span>
+                </div>
+              </div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="order-card js-order-card">
+      <div class="a-box-group a-spacing-base">
+        <div class="a-box a-color-offset-background order-header">
+          <div class="a-box-inner">
+            <div class="a-fixed-right-grid"><div class="a-fixed-right-grid-inner">
+              <div class="a-fixed-right-grid-col a-col-left">
+                <div class="a-row">
+                  <div class="a-column a-span3">
+                    <div class="a-row a-size-mini"><span class="a-color-secondary a-text-caps">Pedido realizado</span></div>
+                    <div class="a-row"><span class="a-size-base a-color-secondary">3 de agosto de 2026</span></div>
+                  </div>
+                  <div class="a-column a-span2">
+                    <div class="a-row a-size-mini"><span class="a-color-secondary a-text-caps">Total</span></div>
+                    <div class="a-row"><span class="a-size-base a-color-secondary">129,00 €</span></div>
+                  </div>
+                  <div class="a-column a-span7 a-span-last yohtmlc-recipient">
+                    <div class="a-row a-size-mini"><span class="a-color-secondary a-text-caps">Enviar a</span></div>
+                    <div class="a-row"><span class="a-size-base a-color-secondary">Test Person</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="a-fixed-right-grid-col a-col-right">
+                <div class="a-row a-size-mini yohtmlc-order-id">
+                  <span class="a-color-secondary a-text-caps">Pedido n.º</span>
+                  <span class="a-color-secondary" dir="ltr">402-7654321-0000002</span>
+                </div>
+                <div class="a-row">
+                  <div class="yohtmlc-order-level-connections">
+                    <a class="a-link-normal" href="/gp/your-account/order-details?orderID=402-7654321-0000002">Ver detalles del pedido</a>
+                    <i class="a-icon a-icon-text-separator"></i>
+                    <a class="a-link-normal a-popover-trigger" href="/gp/css/summary/print.html?orderID=402-7654321-0000002" data-a-popover='{"url":"/gp/shared-cs/ajax/invoice/invoice.html?orderId=402-7654321-0000002&amp;relatedRequestId=XYZ789&amp;isADriveNode=false","closeButton":false}'>Factura</a>
+                  </div>
+                </div>
+              </div>
+            </div></div>
+          </div>
+        </div>
+
+        <div class="a-box delivery-box">
+          <div class="a-box-inner">
+            <div class="a-fixed-right-grid"><div class="a-fixed-right-grid-inner">
+              <div class="a-fixed-right-grid-col a-col-left">
+                <div class="a-row"><div class="yohtmlc-shipment-status-primaryText"><span class="a-size-medium delivery-box__primary-text">Reembolso emitido</span></div></div>
+                <div class="a-row"><span class="delivery-box__secondary-text">Tu reembolso de 129,00 € se ha emitido el 20 de agosto de 2026.</span></div>
+
+                <div class="a-fixed-left-grid item-box"><div class="a-fixed-left-grid-inner">
+                  <div class="a-fixed-left-grid-col a-col-left">
+                    <div class="item-view-left-col-inner product-image">
+                      <a class="a-link-normal" href="/dp/B0TEST0003?ref_=ppx_yo2ov_dt_b_fed_image"><img alt="Auriculares" src="https://m.media-amazon.com/images/I/example3._SS142_.jpg"></a>
+                    </div>
+                  </div>
+                  <div class="a-fixed-left-grid-col yohtmlc-item a-col-right">
+                    <div class="a-row"><a class="a-link-normal" href="/gp/product/B0TEST0003/ref=ppx_yo2ov_dt_b_fed_product_details">Auriculares inalámbricos con cancelación de ruido</a></div>
+                  </div>
+                </div></div>
+              </div>
+              <div class="a-fixed-right-grid-col a-col-right">
+                <div class="a-button-stack">
+                  <span class="a-button a-button-base"><span class="a-button-inner"><a class="a-button-text" href="/spr/returns/status?orderId=402-7654321-0000002">Ver estado de la devolución</a></span></span>
+                </div>
+              </div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="a-row a-spacing-extra-large">
+    <ul class="a-pagination">
+      <li class="a-selected"><a href="/gp/css/order-history?timeFilter=year-2026&amp;startIndex=0">1</a></li>
+      <li class="a-normal"><a href="/gp/css/order-history?timeFilter=year-2026&amp;startIndex=10">2</a></li>
+      <li class="a-last"><a href="/gp/css/order-history?timeFilter=year-2026&amp;startIndex=10">Siguiente</a></li>
+    </ul>
+  </div>
+</div>
+</div>
+</body>
+</html>
