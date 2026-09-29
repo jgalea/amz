@@ -47,7 +47,7 @@ func PrepareReturn(ctx context.Context, site Site, orderID, asin, reason, commen
 	doc.Find("a[href]").EachWithBreak(func(_ int, a *goquery.Selection) bool {
 		href, _ := a.Attr("href")
 		for _, k := range returnLinkRe {
-			if strings.Contains(strings.ToLower(href), k) && !strings.Contains(strings.ToLower(href), "help") {
+			if strings.Contains(strings.ToLower(href), k) && !strings.Contains(strings.ToLower(href), "help") && site.Owns(site.Absolute(href)) {
 				link = site.Absolute(href)
 				return false
 			}

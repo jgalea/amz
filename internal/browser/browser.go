@@ -5,6 +5,7 @@ package browser
 import (
 	"context"
 	"fmt"
+	"github.com/jgalea/amz/internal/private"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -67,7 +68,7 @@ func Open(parent context.Context, o Options) (*Session, error) {
 	if exec == "" {
 		return nil, fmt.Errorf("no Chrome found; set AMZ_CHROME to the browser binary")
 	}
-	if err := os.MkdirAll(o.ProfileDir, 0o700); err != nil {
+	if err := private.Dir(o.ProfileDir); err != nil {
 		return nil, err
 	}
 	if inUse(o.ProfileDir) {

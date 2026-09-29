@@ -220,3 +220,21 @@ func TestParseSummary(t *testing.T) {
 		t.Errorf("open summary = %+v", s)
 	}
 }
+
+func TestSiteOwns(t *testing.T) {
+	s := Site{TLD: "es"}
+	for u, want := range map[string]bool{
+		"https://www.amazon.es/documents/download/x/invoice.pdf": true,
+		"https://images.amazon.es/x.pdf":                         true,
+		"http://www.amazon.es/x":                                 false,
+		"https://www.amazon.es.evil.com/x":                       false,
+		"https://evil.com/?u=www.amazon.es":                      false,
+		"https://user@www.amazon.es/x":                           false,
+		"https://www.amazon.de/x":                                false,
+		"https://www.amazon.es:8443/x":                           false,
+	} {
+		if got := s.Owns(u); got != want {
+			t.Errorf("Owns(%q) = %v", u, got)
+		}
+	}
+}

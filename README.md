@@ -21,7 +21,7 @@ Amazon has no customer-facing API. The order history is only reachable through t
 go install github.com/jgalea/amz/cmd/amz@latest
 ```
 
-Needs Go 1.26+ and a local Chrome or Chromium for the signed-in commands. Runs on macOS, Linux and Windows.
+Needs Go 1.26.6 or later (an older Go downloads it automatically) and a local Chrome or Chromium for the signed-in commands. Runs on macOS, Linux and Windows.
 
 ## Accounts
 

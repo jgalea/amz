@@ -68,6 +68,17 @@ func (s Site) GiftCardURL() string {
 var Delay = 1500 * time.Millisecond
 
 // Absolute turns a relative href from a page into a full URL on this site.
+// Owns reports whether u is an https URL on this storefront's own host,
+// the only place a signed-in fetch may go.
+func (s Site) Owns(u string) bool {
+	p, err := url.Parse(u)
+	if err != nil || p.Scheme != "https" || p.User != nil || p.Port() != "" {
+		return false
+	}
+	h := p.Hostname()
+	return h == "www.amazon."+s.TLD || strings.HasSuffix(h, ".amazon."+s.TLD)
+}
+
 func (s Site) Absolute(href string) string {
 	if href == "" || strings.HasPrefix(href, "http://") || strings.HasPrefix(href, "https://") {
 		return href

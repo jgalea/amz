@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/jgalea/amz/internal/private"
 	"os"
 	"path/filepath"
 )
@@ -65,7 +66,7 @@ func LoadSettings() (Settings, error) {
 }
 
 func (s Settings) Save() error {
-	if err := os.MkdirAll(Dir(), 0o700); err != nil {
+	if err := private.Dir(Dir()); err != nil {
 		return err
 	}
 	raw, err := json.MarshalIndent(s, "", "  ")

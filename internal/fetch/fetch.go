@@ -198,6 +198,11 @@ func ChartURL(asin string, sf market.Storefront, source, period string) (string,
 	if period == "" {
 		period = "all"
 	}
+	switch period {
+	case "all", "1y", "6m", "3m", "1m":
+	default:
+		return "", fmt.Errorf("period must be all, 1y, 6m, 3m or 1m, not %q", period)
+	}
 	return fmt.Sprintf("https://charts.camelcamelcamel.com/%s/%s/%s.png?force=1&zero=0&w=1710&h=1026&desired=false&legend=1&ilt=1&tp=%s&fo=0&lang=en", sf.Camel, strings.ToUpper(asin), source, period), nil
 }
 

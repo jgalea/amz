@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/jgalea/amz/internal/private"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,6 +35,9 @@ func ParseInvoiceLinks(site Site, doc *goquery.Document) []InvoiceLink {
 			return
 		}
 		u := site.Absolute(href)
+		if !site.Owns(u) {
+			return
+		}
 		if seen[u] {
 			return
 		}
@@ -64,7 +68,7 @@ var unsafeFile = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
 // Files that already exist are left alone, so a rerun only fetches
 // what is missing. log, if not nil, gets one line per order.
 func SaveInvoices(ctx context.Context, site Site, orders []Order, dir string, log func(string)) error {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := private.Dir(dir); err != nil {
 		return err
 	}
 	if log == nil {
@@ -111,7 +115,7 @@ func SaveInvoices(ctx context.Context, site Site, orders []Order, dir string, lo
 		}
 		// The popover is fetched from inside the page, so it goes out
 		// with the session's cookies. We are on the site already.
-		body, _, err := FetchInPage(ctx, popover)
+		body, _, err := FetchInPage(ctx, site, popover)
 		if err != nil {
 			log(o.ID + "  invoice popover: " + err.Error())
 			continue
@@ -130,7 +134,7 @@ func SaveInvoices(ctx context.Context, site Site, orders []Order, dir string, lo
 			if exists(out) {
 				continue
 			}
-			data, ctype, err := FetchInPage(ctx, l.URL)
+			data, ctype, err := FetchInPage(ctx, site, l.URL)
 			if err != nil {
 				log(fmt.Sprintf("%s  invoice %d: %s", o.ID, i+1, err))
 				continue
@@ -178,15 +182,23 @@ func printToPDF(ctx context.Context) ([]byte, error) {
 	return pdf, err
 }
 
+// maxInPage caps what an in-page fetch will pull through the browser.
+const maxInPage = "26214400"
+
 // FetchInPage downloads a same-site URL through the page's own fetch,
 // so the request carries the session exactly as the browser would send
 // it. Returns the body and its content type.
-func FetchInPage(ctx context.Context, u string) ([]byte, string, error) {
+func FetchInPage(ctx context.Context, site Site, u string) ([]byte, string, error) {
+	if !site.Owns(u) {
+		return nil, "", fmt.Errorf("refusing to fetch %s: not on %s", u, site.Base())
+	}
 	js := `(async () => {
   try {
     const r = await fetch(` + jsString(u) + `, {credentials: "include"});
     if (!r.ok) return JSON.stringify({error: "HTTP " + r.status});
+    if (Number(r.headers.get("content-length") || 0) > ` + maxInPage + `) return JSON.stringify({error: "response too large"});
     const bytes = new Uint8Array(await r.arrayBuffer());
+    if (bytes.length > ` + maxInPage + `) return JSON.stringify({error: "response too large"});
     let bin = "";
     for (let i = 0; i < bytes.length; i += 0x8000) {
       bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));

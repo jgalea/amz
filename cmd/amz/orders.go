@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
+	"github.com/jgalea/amz/internal/private"
 	"io"
 	"os"
 	"path/filepath"
@@ -399,7 +400,7 @@ func dumpCmd(args []string) error {
 		if len(sfs) > 1 {
 			dir = filepath.Join(out, sf.Code)
 		}
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := private.Dir(dir); err != nil {
 			return err
 		}
 		site := amazon.Site{TLD: sf.Code}
@@ -410,7 +411,7 @@ func dumpCmd(args []string) error {
 		if err := writeJSON(filepath.Join(dir, "orders.json"), got); err != nil {
 			return err
 		}
-		f, err := os.Create(filepath.Join(dir, "orders.csv"))
+		f, err := private.Create(filepath.Join(dir, "orders.csv"))
 		if err != nil {
 			return err
 		}

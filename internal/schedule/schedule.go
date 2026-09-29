@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -20,6 +21,8 @@ type Job struct {
 
 // Jobs is the default set: a sync in the small hours, price watches
 // every few hours, the return-window and health checks once a day.
+var labelRe = regexp.MustCompile(`^[A-Za-z0-9.-]*$`)
+
 func Jobs(account string) []Job {
 	acct := []string{}
 	if account != "" {
@@ -78,6 +81,9 @@ func Install(dir, labelPrefix, binary, logDir string, jobs []Job, env map[string
 		return nil, err
 	}
 	var paths []string
+	if !labelRe.MatchString(labelPrefix) {
+		return nil, fmt.Errorf("label prefix %q may only hold letters, digits, dots and dashes", labelPrefix)
+	}
 	for _, j := range jobs {
 		label := labelPrefix + "amz-" + j.Name
 		p := filepath.Join(dir, label+".plist")

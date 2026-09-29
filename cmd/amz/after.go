@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
+	"github.com/jgalea/amz/internal/private"
 	"os"
 	"path/filepath"
 	"strings"
@@ -281,7 +282,7 @@ func chaseCmd(args []string) error {
 		fmt.Printf("no return older than %d days is waiting for a refund\n", days)
 		return nil
 	}
-	if err := os.MkdirAll(out, 0o700); err != nil {
+	if err := private.Dir(out); err != nil {
 		return err
 	}
 	for _, l := range lines {

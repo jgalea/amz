@@ -2,6 +2,7 @@ package money
 
 import (
 	"fmt"
+	"github.com/jgalea/amz/internal/private"
 	"io"
 	"os"
 	"path/filepath"
@@ -111,7 +112,7 @@ func Export(orders []store.Order, q Quarter, srcDirs []string, root, account str
 			}
 		}
 		for _, src := range files {
-			if err := os.MkdirAll(dest, 0o755); err != nil {
+			if err := private.Dir(dest); err != nil {
 				return out, dest, err
 			}
 			name := filepath.Base(src)
@@ -143,7 +144,7 @@ func copyFile(src, dst string) error {
 	}
 	defer in.Close()
 	tmp := dst + ".part"
-	out, err := os.Create(tmp)
+	out, err := private.Create(tmp)
 	if err != nil {
 		return err
 	}

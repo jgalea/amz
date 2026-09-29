@@ -52,3 +52,18 @@ func TestBlocked(t *testing.T) {
 		t.Error("Akamai interstitial not detected")
 	}
 }
+
+func TestChartPeriodAllowlist(t *testing.T) {
+	sf, err := market.Get("es")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ChartURL("B0TEST0001", sf, "amazon", "1y"); err != nil {
+		t.Errorf("1y rejected: %v", err)
+	}
+	for _, bad := range []string{"../../x", "all/../../evil", "1y&tp=all"} {
+		if _, err := ChartURL("B0TEST0001", sf, "amazon", bad); err == nil {
+			t.Errorf("period %q accepted", bad)
+		}
+	}
+}

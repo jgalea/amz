@@ -99,7 +99,8 @@ func telegram(s config.Notify, title, body string) error {
 	payload, _ := json.Marshal(map[string]string{"chat_id": s.Telegram.ChatID, "text": title + "\n" + body})
 	resp, err := client.Post("https://api.telegram.org/bot"+tok+"/sendMessage", "application/json", bytes.NewReader(payload))
 	if err != nil {
-		return err
+		// A failed request's error carries the URL, and the URL carries the token.
+		return fmt.Errorf("telegram: %s", strings.ReplaceAll(err.Error(), tok, "<token>"))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {

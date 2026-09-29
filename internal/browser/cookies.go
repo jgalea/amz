@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jgalea/amz/internal/private"
 	"os"
 	"path/filepath"
 	"time"
@@ -38,10 +39,10 @@ func SaveCookies(ctx context.Context, path string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := private.Dir(filepath.Dir(path)); err != nil {
 		return 0, err
 	}
-	if err := os.WriteFile(path, raw, 0o600); err != nil {
+	if err := private.WriteFile(path, raw); err != nil {
 		return 0, err
 	}
 	return len(jar), nil

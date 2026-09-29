@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
+	"github.com/jgalea/amz/internal/private"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS notices (
 
 // Open opens (creating if needed) the database at path.
 func Open(path string) (*Store, error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	if err := private.Dir(filepath.Dir(path)); err != nil {
 		return nil, err
 	}
 	dsn := "file:" + path + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)"

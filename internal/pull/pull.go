@@ -5,6 +5,7 @@ package pull
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -285,6 +286,11 @@ func SessionFetch(acct config.Account, pageURL, fragmentURL string, headless boo
 	if amazon.IsSignInPage(p.URL) {
 		return nil, amazon.ErrSignedOut
 	}
-	body, _, err := amazon.FetchInPage(s.Ctx, fragmentURL)
+	u, err := url.Parse(pageURL)
+	if err != nil {
+		return nil, err
+	}
+	site := amazon.Site{TLD: strings.TrimPrefix(u.Hostname(), "www.amazon.")}
+	body, _, err := amazon.FetchInPage(s.Ctx, site, fragmentURL)
 	return body, err
 }

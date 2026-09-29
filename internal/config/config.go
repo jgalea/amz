@@ -5,6 +5,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/jgalea/amz/internal/private"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -149,14 +150,14 @@ func (a Account) Save() error {
 			return err
 		}
 	}
-	if err := os.MkdirAll(a.Dir(), 0o700); err != nil {
+	if err := private.Dir(a.Dir()); err != nil {
 		return err
 	}
 	raw, err := json.MarshalIndent(a, "", "  ")
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(a.path(), append(raw, '\n'), 0o600); err != nil {
+	if err := private.WriteFile(a.path(), append(raw, '\n')); err != nil {
 		return err
 	}
 	// The amz-era marker is redundant once account.json exists.
@@ -276,7 +277,7 @@ func Migrate() error {
 		if _, err := os.Stat(to); err == nil {
 			return fmt.Errorf("both %s and %s exist; move one aside by hand", from, to)
 		}
-		if err := os.MkdirAll(filepath.Dir(to), 0o700); err != nil {
+		if err := private.Dir(filepath.Dir(to)); err != nil {
 			return err
 		}
 		if err := os.Rename(from, to); err != nil {

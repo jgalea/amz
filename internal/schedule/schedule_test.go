@@ -60,3 +60,10 @@ func TestAnnounce(t *testing.T) {
 		t.Errorf("feed line: %q", raw)
 	}
 }
+
+func TestInstallRejectsPathInLabelPrefix(t *testing.T) {
+	dir := t.TempDir()
+	if _, err := Install(dir, "../../evil.", "/bin/true", dir, nil, nil); err == nil {
+		t.Error("prefix with a path was accepted")
+	}
+}
