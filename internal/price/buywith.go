@@ -34,6 +34,12 @@ func Rank(qs []AccountQuote, reclaim bool) []AccountQuote {
 	for i := range out {
 		q := &out[i]
 		q.Effective = q.PriceEUR
+		if q.ExVATEUR > 0 && q.ExVATEUR >= q.PriceEUR {
+			// An ex-VAT figure is never the higher one; this is a
+			// crossed-out list price or similar read in its place.
+			q.ExVAT, q.ExVATEUR = 0, 0
+			q.Note = "ex-VAT price ignored: it was not below the incl-VAT price"
+		}
 		if q.Type == "business" && reclaim && q.ExVATEUR > 0 {
 			q.Effective = q.ExVATEUR
 			q.Note = "ex-VAT, on the basis that the VAT is reclaimed"

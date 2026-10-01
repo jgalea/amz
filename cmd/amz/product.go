@@ -226,6 +226,13 @@ func sessionQuotes(c *common, asin string, sfs []market.Storefront, base string)
 				continue
 			}
 			q := price.FromPage(asin, sf, html, u, a.Country)
+			if q.Product != nil && q.Product.SignedOut {
+				// The saved cookies are per storefront; a product page
+				// still renders without them, as the anonymous one.
+				aq.Error = fmt.Sprintf("not signed in on amazon.%s (no session there, so only the anonymous price above applies; `amz login --account %s --market %s`)", sf.Code, a.Name, sf.Code)
+				out = append(out, aq)
+				continue
+			}
 			aq.Price, aq.Currency, aq.Prime = q.Price, q.Currency, q.Prime
 			if q.Product != nil {
 				aq.ExVAT = q.Product.PriceExVAT

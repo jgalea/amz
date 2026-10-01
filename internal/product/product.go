@@ -7,6 +7,7 @@ package product
 
 import (
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -27,6 +28,9 @@ type Product struct {
 	ListPrice   float64 `json:"list_price,omitempty"`
 	// PriceExVAT is the business-account price when the page shows one.
 	PriceExVAT float64 `json:"price_ex_vat,omitempty"`
+	// SignedOut is set when the page was rendered for an anonymous
+	// visitor: the account menu links to sign-in.
+	SignedOut bool `json:"signed_out,omitempty"`
 	// UsedPrice is the cheapest Warehouse / used offer the page advertises.
 	UsedPrice float64 `json:"used_price,omitempty"`
 	UsedText  string  `json:"used_text,omitempty"`
@@ -93,6 +97,74 @@ var eanKeys = []string{"ean", "gtin", "upc", "código de barras", "barcode"}
 
 func text(s *goquery.Selection) string {
 	return strings.Join(strings.Fields(s.First().Text()), " ")
+}
+
+// priceBlocks are the containers that hold the buy box price. Prices
+// elsewhere on the page (carousels, bundles, per-unit) are not the
+// product's own.
+const priceBlocks = "#corePriceDisplay_desktop_feature_div, #corePrice_desktop, #corePrice_feature_div, #apex_desktop, #buybox, #priceblock_businessprice"
+
+var (
+	vatExclRe = regexp.MustCompile(`(?i)excl\.?\s*VAT|VAT\s*excl|sin IVA|IVA no incl|IVA escl|exkl\.?\s*MwSt|ohne MwSt|zzgl\.?\s*MwSt|\bHT\b|hors taxes?|excl\.?\s*btw|zonder btw|sem IVA`)
+	vatInclRe = regexp.MustCompile(`(?i)incl\.?\s*VAT|VAT\s*incl|con IVA|IVA incl|inkl\.?\s*MwSt|\bTTC\b|incl\.?\s*btw|com IVA`)
+)
+
+// listPrice is the crossed-out reference price, which only counts when
+// it sits in the price block and is above the selling price.
+func listPrice(doc *goquery.Document, price float64) float64 {
+	for _, sel := range []string{".basisPrice .a-offscreen", "#listPrice", ".a-price[data-a-color=\"secondary\"] .a-offscreen", ".a-text-price .a-offscreen"} {
+		var found float64
+		doc.Find(priceBlocks).Find(sel).EachWithBreak(func(_ int, s *goquery.Selection) bool {
+			if v, ok := Number(text(s)); ok && v > price {
+				found = v
+				return false
+			}
+			return true
+		})
+		if found > 0 {
+			return found
+		}
+	}
+	return 0
+}
+
+// businessPrices reads the ex-VAT and incl-VAT pair an Amazon Business
+// account is shown. Each figure is identified by its own VAT label (the
+// priceblock_vat_* class, or the "excl. VAT" / "incl. VAT" text next to
+// it), never by position.
+func businessPrices(doc *goquery.Document) (excl, incl float64, inclText string) {
+	excl, _ = Number(text(doc.Find(".priceblock_vat_excl_price .a-offscreen, #price_vat_excl .a-offscreen, #priceblock_businessprice, #businessPrice .a-offscreen, .businessPrice .a-offscreen")))
+	inclText = text(doc.Find(".priceblock_vat_inc_price .a-offscreen"))
+	incl, _ = Number(inclText)
+	if excl > 0 && incl > 0 {
+		return excl, incl, inclText
+	}
+	// Without the classes, go by the label written next to each price.
+	// A parent holding several prices is ambiguous and skipped.
+	var byLabelExcl, byLabelIncl float64
+	var byLabelText string
+	doc.Find(priceBlocks).Find(".a-price").Each(func(_ int, s *goquery.Selection) {
+		t := text(s.Find(".a-offscreen"))
+		v, ok := Number(t)
+		if !ok || v == 0 || s.Parent().Find(".a-price").Length() != 1 {
+			return
+		}
+		label := text(s.Parent())
+		switch {
+		case vatExclRe.MatchString(label) && !vatInclRe.MatchString(label):
+			if byLabelExcl == 0 {
+				byLabelExcl = v
+			}
+		case vatInclRe.MatchString(label) && !vatExclRe.MatchString(label):
+			if byLabelIncl == 0 {
+				byLabelIncl, byLabelText = v, t
+			}
+		}
+	})
+	if byLabelExcl > 0 && byLabelIncl > 0 {
+		return byLabelExcl, byLabelIncl, byLabelText
+	}
+	return excl, incl, inclText
 }
 
 // Number parses a localised price or count ("1.234,56", "1,234.56",
@@ -207,12 +279,24 @@ func Parse(html, asin, mkt, url, currency string) Product {
 			p.Warnings = append(p.Warnings, "no price found and no unavailability message either; the layout may have changed")
 		}
 	}
-	if v, ok := Number(text(doc.Find(".basisPrice .a-offscreen, #listPrice, .a-text-price .a-offscreen"))); ok {
-		p.ListPrice = v
+	if excl, incl, inclText := businessPrices(doc); excl > 0 || incl > 0 {
+		// A business account sees the ex-VAT figure as the headline
+		// price, so the price selectors land on it; the incl-VAT one is
+		// what the card is charged.
+		if incl > 0 && (p.Price == 0 || p.Price == excl) {
+			p.Price, p.PriceText, p.PriceSource = incl, inclText, "business price incl. VAT"
+			p.Currency = CurrencyOf(p.PriceText, currency)
+		}
+		if excl > 0 && p.Price > 0 && excl < p.Price {
+			p.PriceExVAT = excl
+		} else if excl > 0 {
+			p.Warnings = append(p.Warnings, fmt.Sprintf("ignored an ex-VAT price of %.2f that is not below the price %.2f", excl, p.Price))
+		}
 	}
-	if v, ok := Number(text(doc.Find("#priceblock_businessprice, #businessPrice .a-offscreen, .businessPrice .a-offscreen, #corePriceDisplay_desktop_feature_div .a-price[data-a-color=\"secondary\"] .a-offscreen"))); ok && v > 0 && v != p.Price {
-		p.PriceExVAT = v
-	}
+	p.ListPrice = listPrice(doc, p.Price)
+	// The sign-out item only renders for a signed-in visitor; without it,
+	// the account menu linking to sign-in settles it.
+	p.SignedOut = doc.Find("#nav-item-signout").Length() == 0 && doc.Find("#nav-link-accountList[href*='/ap/signin'], #nav-link-accountList a[href*='/ap/signin']").Length() > 0
 	if t := text(doc.Find("#usedBuySection, #usedOfferAccordionRow, #olp_feature_div, #olpLinkWidget_feature_div, #tmmSwatches .a-color-secondary")); t != "" {
 		for _, sel := range []string{"#usedBuySection .a-color-price", "#usedBuySection .a-offscreen", "#usedOfferAccordionRow .a-offscreen", "#olp_feature_div .a-color-price", "#olpLinkWidget_feature_div .a-color-price"} {
 			if v, ok := Number(text(doc.Find(sel))); ok && v > 0 {
