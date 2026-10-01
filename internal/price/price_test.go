@@ -33,3 +33,13 @@ func TestCountryName(t *testing.T) {
 		}
 	}
 }
+
+func TestRankDropsExVATAbovePrice(t *testing.T) {
+	qs := []AccountQuote{
+		{Account: "work", Type: "business", Market: "de", PriceEUR: 146.07, ExVAT: 184.99, ExVATEUR: 184.99},
+	}
+	got := Rank(qs, true)
+	if got[0].Effective != 146.07 || got[0].ExVATEUR != 0 || got[0].Note == "" {
+		t.Errorf("an ex-VAT figure above the price must be dropped, with a note: %+v", got[0])
+	}
+}
