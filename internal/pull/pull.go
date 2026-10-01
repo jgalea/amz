@@ -252,14 +252,19 @@ func hasReturnWording(o store.Order) bool {
 
 // SessionPage loads any URL in the account's signed-in Chrome and
 // returns the rendered HTML, for reading the price that account is
-// shown. ErrSignedOut when the site redirects to sign-in.
-func SessionPage(acct config.Account, u string, headless bool) (string, string, error) {
+// shown. ready are the selectors that mark the page as rendered (a
+// detail page's when none are given). ErrSignedOut when the site
+// redirects to sign-in.
+func SessionPage(acct config.Account, u string, headless bool, ready ...string) (string, string, error) {
+	if len(ready) == 0 {
+		ready = []string{"#productTitle, #outOfStock, #dp"}
+	}
 	s, err := Session(acct, headless, 3*time.Minute)
 	if err != nil {
 		return "", "", err
 	}
 	defer s.Close()
-	p, err := amazon.Load(s.Ctx, u, 20*time.Second, "#productTitle, #outOfStock, #dp")
+	p, err := amazon.Load(s.Ctx, u, 20*time.Second, ready...)
 	if err != nil {
 		return "", "", err
 	}

@@ -67,3 +67,13 @@ func TestChartPeriodAllowlist(t *testing.T) {
 		}
 	}
 }
+
+func TestSearchURL(t *testing.T) {
+	es, _ := market.Get("es")
+	if u := SearchURL("  Govee   H1630 ", es); u != "https://www.amazon.es/s?k=Govee+H1630" {
+		t.Errorf("url = %q", u)
+	}
+	if u := SearchURL("lámpara & pie", es); u != "https://www.amazon.es/s?k=l%C3%A1mpara+%26+pie" {
+		t.Errorf("url = %q", u)
+	}
+}

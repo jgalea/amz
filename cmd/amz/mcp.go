@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/jgalea/amz/internal/after"
@@ -74,6 +75,33 @@ func mcpTools() []mcp.Tool {
 				cmp := price.Compare(asin, sfs, price.Options{Match: mcp.Flag(args, "match"), Base: "EUR", Country: buyerCountry(mcpCommon(args))})
 				savePrices(cmp, nil)
 				return cmp, nil
+			},
+		},
+		{
+			Name:        "search",
+			Description: "Search an Amazon storefront and list the results: ASIN, title, price converted to EUR, rating and count, Prime and sponsored flags, and where Amazon priced the page for. Sponsored results are flagged, or dropped with no_sponsored. Anonymous, paced, cached; Amazon walls search pages more often than product pages.",
+			Schema:      mcp.Schema(map[string]any{"query": mcp.Str("search words"), "markets": mcp.Str("comma list of storefronts, or all/eu (default es)"), "limit": mcp.Num("at most this many results per storefront (default 20, 0 for the whole first page)"), "brand": mcp.Str("only results whose title carries this brand"), "no_sponsored": mcp.Bool("drop sponsored results"), "account": accountProp}, "query"),
+			Run: func(ctx context.Context, args map[string]any) (any, error) {
+				query := strings.TrimSpace(mcp.String(args, "query"))
+				if query == "" {
+					return nil, fmt.Errorf("needs a query")
+				}
+				markets := mcp.String(args, "markets")
+				if markets == "" {
+					markets = "es"
+				}
+				sfs, err := market.Resolve(markets)
+				if err != nil {
+					return nil, err
+				}
+				limit := 20
+				if _, ok := args["limit"]; ok {
+					limit = int(mcp.Number(args, "limit"))
+				}
+				if limit < 0 {
+					return nil, fmt.Errorf("limit must not be negative")
+				}
+				return price.Search(query, sfs, price.SearchOptions{Base: "EUR", Country: buyerCountry(mcpCommon(args)), Limit: limit, Brand: mcp.String(args, "brand"), NoSponsored: mcp.Flag(args, "no_sponsored")}), nil
 			},
 		},
 		{
