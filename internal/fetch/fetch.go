@@ -14,6 +14,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -139,6 +140,11 @@ func Blocked(html string) bool {
 
 func DetailURL(asin string, sf market.Storefront) string {
 	return sf.Base() + "/dp/" + strings.ToUpper(asin)
+}
+
+// SearchURL is the storefront's search page for a query.
+func SearchURL(query string, sf market.Storefront) string {
+	return sf.Base() + "/s?k=" + url.QueryEscape(strings.Join(strings.Fields(query), " "))
 }
 
 // Get fetches any public URL on a storefront with the same caching and

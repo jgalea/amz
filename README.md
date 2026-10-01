@@ -79,6 +79,8 @@ These read public product pages anonymously, one request every two seconds per s
 amz price B0TEST0001                     # es, de, fr, it, nl, co.uk in EUR
 amz price B0TEST0001 --markets all --match
 amz price B0TEST0001 --session           # plus what each of your accounts is shown
+amz search "govee floor lamp"            # the amazon.es results with prices in EUR
+amz search "govee floor lamp" --markets es,de --brand govee --no-sponsored --limit 10
 amz history B0TEST0001 --markets es --period 1y
 amz reviews B0TEST0001 --market de
 amz seller B0TEST0001 --market es
@@ -86,6 +88,8 @@ amz buywith B0TEST0001
 ```
 
 `price` gives the price on each storefront converted with the ECB daily rate, the used or Warehouse price when the page advertises one, Subscribe & Save, coupons and business quantity tiers when visible, and where Amazon priced the page for (it prices for the country it infers from your IP, so the column matters). The account's country decides which destination counts as "yours". `--match` searches by EAN, then by title and brand, on storefronts that do not list the ASIN, and marks the result as matched so you can check it is the same pack size; Amazon walls its search pages more aggressively than product pages, so it does not always get through. Every observation is recorded in the store.
+
+`search` lists a storefront's first page of results for a query: ASIN, price converted with the ECB rate, rating and count, Prime when the page shows it (Amazon mostly reserves the badge for signed-in members), and where Amazon priced the page for. Sponsored placements are flagged `SPONSORED` in the order Amazon put them, or dropped with `--no-sponsored`; `--brand` keeps the titles that carry the brand, `--limit` caps the rows (0 for the whole page), `--session` adds what each of your accounts is shown. Amazon walls search pages more readily than product pages, so an anonymous search can come back blocked; `--session` reads it through your signed-in browser instead.
 
 `history` saves CamelCamelCamel's chart for the ASIN. Camel's pages sit behind a Cloudflare challenge, but the chart renderer is open and its legend prints the exact lowest, highest and current price with dates, so the PNG is the data.
 
@@ -155,7 +159,7 @@ A watch fires when the lowest converted price across its storefronts (used offer
 
 ## MCP server
 
-`amz mcp` serves the read commands as tools over stdio (Model Context Protocol), so an agent can ask for a price, an order, a warranty or the account's health the same way you do: `price`, `history`, `reviews`, `seller`, `buywith`, `orders`, `warranty`, `returns_window`, `audit`, `spend`, `health`, `markets`. `return prepare` is not exposed. With Claude Code:
+`amz mcp` serves the read commands as tools over stdio (Model Context Protocol), so an agent can ask for a price, an order, a warranty or the account's health the same way you do: `price`, `search`, `history`, `reviews`, `seller`, `buywith`, `orders`, `warranty`, `returns_window`, `audit`, `spend`, `health`, `markets`. `return prepare` is not exposed. With Claude Code:
 
 ```
 claude mcp add --scope user amz -- amz mcp

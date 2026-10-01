@@ -13,11 +13,8 @@ package price
 import (
 	"fmt"
 	"math"
-	"regexp"
 	"strings"
 	"sync"
-
-	"github.com/PuerkitoBio/goquery"
 
 	"github.com/jgalea/amz/internal/fetch"
 	"github.com/jgalea/amz/internal/fx"
@@ -107,15 +104,8 @@ func fill(q *Quote, p product.Product, sf market.Storefront, country string) {
 	q.Availability, q.Delivery, q.ImportFees, q.Destination = p.Availability, p.Delivery, p.ImportFees, p.DeliveryDestination
 	q.SoldBy, q.ShipsFrom, q.Prime = p.SoldBy, p.ShipsFrom, p.Prime
 	q.Warnings = append(q.Warnings, p.Warnings...)
-	if p.DeliveryDestination != "" && p.DestinationType == "COUNTRY" {
-		want := strings.ToLower(sf.Country)
-		if country != "" {
-			want = strings.ToLower(CountryName(country))
-		}
-		d := strings.ToLower(p.DeliveryDestination)
-		if d != want && d != strings.ToLower(sf.CountryLocal) && !strings.Contains(d, want) {
-			q.Warnings = append(q.Warnings, fmt.Sprintf("priced for delivery to %s, not %s", p.DeliveryDestination, strings.Title(want)))
-		}
+	if w := destinationWarning(p.DeliveryDestination, p.DestinationType, sf, country); w != "" {
+		q.Warnings = append(q.Warnings, w)
 	} else if p.DeliveryDestination == "" {
 		q.Warnings = append(q.Warnings, "could not read the delivery destination, so the price is unanchored")
 	}
@@ -127,30 +117,36 @@ func fill(q *Quote, p product.Product, sf market.Storefront, country string) {
 	}
 }
 
-var asinAttrRe = regexp.MustCompile(`^[A-Z0-9]{10}$`)
+// destinationWarning says when a page was priced for a country other
+// than the buyer's (or, without an account, the storefront's own).
+func destinationWarning(dest, typ string, sf market.Storefront, country string) string {
+	if dest == "" || typ != "COUNTRY" {
+		return ""
+	}
+	want := strings.ToLower(sf.Country)
+	if country != "" {
+		want = strings.ToLower(CountryName(country))
+	}
+	d := strings.ToLower(dest)
+	if d != want && d != strings.ToLower(sf.CountryLocal) && !strings.Contains(d, want) {
+		return fmt.Sprintf("priced for delivery to %s, not %s", dest, strings.Title(want))
+	}
+	return ""
+}
 
 // search runs a storefront search and returns the first result ASIN
 // (sponsored results skipped), or "".
 func search(sf market.Storefront, query string, refresh bool) (string, error) {
-	u := sf.Base() + "/s?k=" + strings.ReplaceAll(strings.TrimSpace(query), " ", "+")
-	page, err := fetch.Get(u, sf, refresh)
+	page, err := fetch.Get(fetch.SearchURL(query, sf), sf, refresh)
 	if err != nil {
 		return "", err
 	}
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(page.HTML))
-	if err != nil {
-		return "", err
-	}
-	found := ""
-	doc.Find(`div[data-component-type="s-search-result"][data-asin]`).EachWithBreak(func(_ int, s *goquery.Selection) bool {
-		a, _ := s.Attr("data-asin")
-		if !asinAttrRe.MatchString(a) || s.Find(".s-sponsored-label-text, [data-component-type='sp-sponsored-result']").Length() > 0 {
-			return true
+	for _, r := range product.ParseSearch(page.HTML, sf.Code, page.URL, sf.Currency).Results {
+		if !r.Sponsored {
+			return r.ASIN, nil
 		}
-		found = a
-		return false
-	})
-	return found, nil
+	}
+	return "", nil
 }
 
 // Compare fetches the ASIN on every storefront given and converts the
