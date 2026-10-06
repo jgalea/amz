@@ -213,3 +213,18 @@ func TestExVATAbovePriceIsDropped(t *testing.T) {
 		t.Error("dropping the figure must warn")
 	}
 }
+
+func TestCurrencyOf(t *testing.T) {
+	cases := map[string]string{
+		"CLP 154.133": "CLP",
+		"141,19 €":    "EUR",
+		"£12.99":      "GBP",
+		"EUR 9,99":    "EUR",
+		"12,50":       "EUR",
+	}
+	for in, want := range cases {
+		if got := CurrencyOf(in, "EUR"); got != want {
+			t.Errorf("CurrencyOf(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
