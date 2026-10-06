@@ -67,7 +67,7 @@ type Product struct {
 var (
 	ratingRe    = regexp.MustCompile(`(\d+[.,]?\d*)\s*(?:de|out of|von|su|sur|van|z|av)\s*5`)
 	intRe       = regexp.MustCompile(`\d[\d.,\s\x{00a0}\x{202f}]*`)
-	currencyRe  = regexp.MustCompile(`\b(EUR|GBP|USD|PLN|SEK)\b`)
+	currencyRe  = regexp.MustCompile(`\b[A-Z]{3}\b`)
 	eanRe       = regexp.MustCompile(`\b(\d{13}|\d{12}|\d{8})\b`)
 	starWords   = map[string]int{"one": 1, "two": 2, "three": 3, "four": 4, "five": 5}
 	slotStarRe  = regexp.MustCompile(`histogram_(\d)$`)
@@ -223,14 +223,16 @@ func Int(raw string) (int, bool) {
 	return n, err == nil
 }
 
+// CurrencyOf reads an explicit ISO code first: a page priced for delivery
+// abroad can show the destination's currency ("CLP 154.133").
 func CurrencyOf(s, fallback string) string {
+	if m := currencyRe.FindString(s); m != "" {
+		return m
+	}
 	for sign, code := range map[string]string{"€": "EUR", "£": "GBP", "$": "USD", "zł": "PLN", "kr": "SEK"} {
 		if strings.Contains(s, sign) {
 			return code
 		}
-	}
-	if m := currencyRe.FindString(s); m != "" {
-		return m
 	}
 	return fallback
 }
