@@ -10,12 +10,13 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/chromedp/chromedp"
 )
 
 // ordersReadySelector matches something that only exists once the order
 // list has rendered: an order card, the empty-state container, or the
 // time filter.
-const ordersReadySelector = ".order-card, .js-order-card, #ordersContainer, select[name=timeFilter], #time-filter"
+const ordersReadySelector = ".order-card, .js-order-card, #ordersContainer, select[name=timeFilter], #time-filter, select[name=timeFilterDropdown]"
 
 type Item struct {
 	Title string `json:"title"`
@@ -67,6 +68,11 @@ func ParseOrders(site Site, doc *goquery.Document) []Order {
 	if cards.Length() == 0 {
 		cards = doc.Find(".order")
 	}
+	if cards.Length() == 0 {
+		cards = doc.Find(".a-box-group").FilterFunction(func(_ int, c *goquery.Selection) bool {
+			return c.Find("#orderCardHeader").Length() > 0
+		})
+	}
 	seen := map[string]bool{}
 	cards.Each(func(_ int, card *goquery.Selection) {
 		o := parseOrderCard(site, card)
@@ -105,7 +111,11 @@ func parseOrderCard(site Site, card *goquery.Selection) Order {
 		label := strings.ToLower(lines[0])
 		switch {
 		case isDateLabel(label):
-			o.Date = lines[1]
+			if o.Date == "" || ParseDate(o.Date) == "" {
+				if ParseDate(lines[1]) != "" || o.Date == "" {
+					o.Date = lines[1]
+				}
+			}
 		case isTotalLabel(label):
 			o.Total = lines[1]
 		}
@@ -319,10 +329,11 @@ func contains(list []string, s string) bool {
 // newest first.
 func ParseYears(doc *goquery.Document) []int {
 	var years []int
-	doc.Find("select[name=timeFilter] option, #time-filter option, #orderFilter option").Each(func(_ int, opt *goquery.Selection) {
+	doc.Find("select[name=timeFilter] option, #time-filter option, #orderFilter option, select[name=timeFilterDropdown] option").Each(func(_ int, opt *goquery.Selection) {
 		v, _ := opt.Attr("value")
-		if strings.HasPrefix(v, "year-") {
-			if y, err := strconv.Atoi(strings.TrimPrefix(v, "year-")); err == nil && !containsInt(years, y) {
+		v = strings.TrimPrefix(v, "year-")
+		if len(v) == 4 {
+			if y, err := strconv.Atoi(v); err == nil && !containsInt(years, y) {
 				years = append(years, y)
 			}
 		}
@@ -389,6 +400,15 @@ func ListYearSince(ctx context.Context, site Site, year int, sinceISO string, pr
 	var all []Order
 	seen := map[string]bool{}
 	expected := 0
+	first, ferr := Load(ctx, site.OrdersURL(0, 0), 20*time.Second, ordersReadySelector)
+	if ferr == nil {
+		if IsSignInPage(first.URL) {
+			return all, ErrSignedOut
+		}
+		if doc, err := first.Doc(); err == nil && doc.Find("select[name=timeFilterDropdown]").Length() > 0 && doc.Find("option[value^=year-]").Length() == 0 {
+			return listBusinessYear(ctx, site, year, sinceISO, progress)
+		}
+	}
 	for start := 0; start < 10000; start += pageSize {
 		p, err := Load(ctx, site.OrdersURL(year, start), 20*time.Second, ordersReadySelector)
 		if err != nil {
@@ -424,6 +444,63 @@ func ListYearSince(ctx context.Context, site Site, year int, sinceISO string, pr
 			break
 		}
 		time.Sleep(Delay)
+	}
+	return all, nil
+}
+
+// listBusinessYear reads one year of a Business account. Its order page
+// ignores the timeFilter URL parameter: the year is picked in a dropdown
+// and the list is paged by a Next link, both on the one open page.
+func listBusinessYear(ctx context.Context, site Site, year int, sinceISO string, progress func(page, total int)) ([]Order, error) {
+	var all []Order
+	var picked bool
+	pick := fmt.Sprintf(`(function(){var a=Array.from(document.querySelectorAll('.a-dropdown-link')).find(function(x){return x.textContent.trim()==='%d'});if(!a)return false;a.click();return true})()`, year)
+	if err := chromedp.Run(ctx,
+		chromedp.Click(`#orderTimeFilter .a-dropdown-prompt`, chromedp.ByQuery),
+		chromedp.Sleep(1500*time.Millisecond),
+		chromedp.Evaluate(pick, &picked),
+		chromedp.Sleep(5*time.Second),
+	); err != nil {
+		return all, err
+	}
+	if !picked {
+		return all, nil
+	}
+	seen := map[string]bool{}
+	for page := 1; page <= 500; page++ {
+		var html string
+		if err := chromedp.Run(ctx, chromedp.OuterHTML("html", &html)); err != nil {
+			return all, err
+		}
+		doc, err := Page{HTML: html}.Doc()
+		if err != nil {
+			return all, err
+		}
+		fresh, old := 0, 0
+		for _, o := range ParseOrders(site, doc) {
+			if sinceISO != "" && o.DateISO != "" && o.DateISO < sinceISO {
+				old++
+			}
+			if seen[o.ID] {
+				continue
+			}
+			seen[o.ID] = true
+			all = append(all, o)
+			fresh++
+		}
+		if progress != nil {
+			progress(page, len(all))
+		}
+		if fresh == 0 || (old > 0 && old >= fresh) {
+			break
+		}
+		var next bool
+		if err := chromedp.Run(ctx, chromedp.Evaluate(`(function(){var n=document.querySelector('.a-pagination .a-last:not(.a-disabled) a');if(!n)return false;n.click();return true})()`, &next), chromedp.Sleep(4*time.Second)); err != nil {
+			return all, err
+		}
+		if !next {
+			break
+		}
 	}
 	return all, nil
 }
