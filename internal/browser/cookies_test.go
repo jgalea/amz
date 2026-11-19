@@ -39,6 +39,23 @@ func TestMergeJarTakesRefreshedCookies(t *testing.T) {
 	}
 }
 
+func TestKeepCookie(t *testing.T) {
+	cases := []struct {
+		c    network.Cookie
+		want bool
+	}{
+		{network.Cookie{Name: "at-acbde", Domain: ".amazon.de", Path: "/"}, true},
+		{network.Cookie{Name: "csm-hit", Domain: "www.amazon.de", Path: "/", Session: true}, true},
+		{network.Cookie{Name: "at-acbde", Domain: "www.amazon.de", Path: "/documents/download/595c71d6", Session: true}, false},
+		{network.Cookie{Name: "IDE", Domain: ".doubleclick.net", Path: "/"}, false},
+	}
+	for _, tc := range cases {
+		if got := keepCookie(&tc.c); got != tc.want {
+			t.Errorf("keepCookie(%s %s%s) = %v, want %v", tc.c.Name, tc.c.Domain, tc.c.Path, got, tc.want)
+		}
+	}
+}
+
 func TestMergeJarKeysOnPath(t *testing.T) {
 	saved := []*network.Cookie{{Name: "a", Domain: ".amazon.es", Path: "/", Value: "root"}}
 	live := []*network.Cookie{{Name: "a", Domain: ".amazon.es", Path: "/gp", Value: "gp"}}

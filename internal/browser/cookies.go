@@ -24,6 +24,9 @@ import (
 // refreshed after every run; restoring the login-time copy instead hands
 // Amazon tokens it has already replaced.
 
+// liveCookies returns the browser's Amazon cookies. Product pages also
+// collect ad-network cookies, and every invoice download sets a copy of
+// the session cookies scoped to that one download path; neither is kept.
 func liveCookies(ctx context.Context) ([]*network.Cookie, error) {
 	var jar []*network.Cookie
 	err := chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
@@ -34,7 +37,23 @@ func liveCookies(ctx context.Context) ([]*network.Cookie, error) {
 		jar = got
 		return nil
 	}))
-	return jar, err
+	if err != nil {
+		return nil, err
+	}
+	kept := jar[:0]
+	for _, c := range jar {
+		if keepCookie(c) {
+			kept = append(kept, c)
+		}
+	}
+	return kept, nil
+}
+
+func keepCookie(c *network.Cookie) bool {
+	if !strings.Contains(c.Domain, "amazon") {
+		return false
+	}
+	return !(c.Session && c.Path != "/")
 }
 
 func SaveCookies(ctx context.Context, path string) (int, error) {
@@ -46,18 +65,11 @@ func SaveCookies(ctx context.Context, path string) (int, error) {
 }
 
 // UpdateCookies writes the browser's current cookies over the saved jar,
-// keeping saved cookies the browser no longer holds. Only Amazon's own
-// cookies are taken; product pages also collect ad-network ones.
+// keeping saved cookies the browser no longer holds.
 func UpdateCookies(ctx context.Context, path string) (int, error) {
-	all, err := liveCookies(ctx)
+	live, err := liveCookies(ctx)
 	if err != nil {
 		return 0, err
-	}
-	live := all[:0]
-	for _, c := range all {
-		if strings.Contains(c.Domain, "amazon") {
-			live = append(live, c)
-		}
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
