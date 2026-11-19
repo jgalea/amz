@@ -73,8 +73,16 @@ func Session(acct config.Account, headless bool, timeout time.Duration) (*browse
 	if err != nil {
 		return nil, err
 	}
-	if _, err := browser.LoadCookies(s.Ctx, acct.CookiePath()); err != nil && !os.IsNotExist(err) {
-		fmt.Fprintln(os.Stderr, "warning: could not restore the saved session: "+err.Error())
+	if _, err := browser.LoadCookies(s.Ctx, acct.CookiePath()); err != nil {
+		if !os.IsNotExist(err) {
+			fmt.Fprintln(os.Stderr, "warning: could not restore the saved session: "+err.Error())
+		}
+		return s, nil
+	}
+	s.BeforeClose = func() {
+		if _, err := browser.UpdateCookies(s.Ctx, acct.CookiePath()); err != nil && s.Ctx.Err() == nil {
+			fmt.Fprintln(os.Stderr, "warning: could not save the refreshed session: "+err.Error())
+		}
 	}
 	return s, nil
 }

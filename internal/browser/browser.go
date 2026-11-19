@@ -18,8 +18,10 @@ import (
 )
 
 type Session struct {
-	Ctx    context.Context
-	cancel []context.CancelFunc
+	Ctx context.Context
+	// BeforeClose runs once, while the browser is still up.
+	BeforeClose func()
+	cancel      []context.CancelFunc
 }
 
 type Options struct {
@@ -129,6 +131,10 @@ func inUse(dir string) bool {
 }
 
 func (s *Session) Close() {
+	if f := s.BeforeClose; f != nil {
+		s.BeforeClose = nil
+		f()
+	}
 	for i := len(s.cancel) - 1; i >= 0; i-- {
 		s.cancel[i]()
 	}
