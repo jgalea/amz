@@ -103,6 +103,16 @@ func IsSignInPage(u string) bool {
 	return false
 }
 
+// IsOrdersPage reports whether a URL is an order list a sign-in returns
+// to: /gp/css/order-history and /your-orders/orders on personal accounts,
+// /ab/your-orders on Business ones.
+func IsOrdersPage(u string) bool {
+	if u == "" || IsSignInPage(u) {
+		return false
+	}
+	return strings.Contains(u, "/order-history") || strings.Contains(u, "/your-orders")
+}
+
 // Page is a loaded page: its final URL and rendered HTML.
 type Page struct {
 	URL  string
@@ -196,7 +206,7 @@ func WaitForLogin(ctx context.Context, site Site, done <-chan struct{}) error {
 		if err := chromedp.Run(ctx, chromedp.Location(&current)); err != nil {
 			return err
 		}
-		if current != "" && !IsSignInPage(current) && (strings.Contains(current, "/order-history") || strings.Contains(current, "/your-orders/")) {
+		if IsOrdersPage(current) {
 			ok, err := LoggedIn(ctx, site)
 			if err != nil {
 				return err
