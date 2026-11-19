@@ -11,6 +11,7 @@ import (
 	"github.com/jgalea/amz/internal/browser"
 	"github.com/jgalea/amz/internal/config"
 	"github.com/jgalea/amz/internal/market"
+	"github.com/jgalea/amz/internal/notify"
 	"github.com/jgalea/amz/internal/pull"
 )
 
@@ -211,9 +212,10 @@ func loginCmd(args []string) error {
 }
 
 func statusCmd(args []string) error {
-	c := flags("status", "[--account NAME] [--market es] [--live]")
-	var live bool
+	c := flags("status", "[--account NAME] [--market es] [--live] [--alert]")
+	var live, alert bool
 	c.fs.BoolVar(&live, "live", false, "open the browser and check the session against the site")
+	c.fs.BoolVar(&alert, "alert", false, "with --live, send a notification when the site has signed the account out")
 	if err := c.parse(args); err != nil {
 		return err
 	}
@@ -244,6 +246,18 @@ func statusCmd(args []string) error {
 			return err
 		}
 		out["signed_in"] = ok
+		if alert && !ok {
+			settings, err := config.LoadSettings()
+			if err != nil {
+				return err
+			}
+			msg := fmt.Sprintf("%s on amazon.%s is signed out. Run: amz login --account %s --market %s", acct.Name, site.TLD, acct.Name, site.TLD)
+			for _, res := range notify.Send(settings.Notify, "amz: signed out", msg) {
+				if !res.OK {
+					fmt.Fprintf(os.Stderr, "notify %s: %s\n", res.Channel, res.Error)
+				}
+			}
+		}
 	}
 	db, err := openStore()
 	if err != nil {
