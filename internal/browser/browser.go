@@ -21,6 +21,7 @@ type Session struct {
 	Ctx context.Context
 	// BeforeClose runs once, while the browser is still up.
 	BeforeClose func()
+	browser     context.Context
 	cancel      []context.CancelFunc
 }
 
@@ -93,6 +94,7 @@ func Open(parent context.Context, o Options) (*Session, error) {
 	s.cancel = append(s.cancel, cancel)
 	ctx, cancel = chromedp.NewContext(ctx)
 	s.cancel = append(s.cancel, cancel)
+	s.browser = ctx
 	if o.Timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, o.Timeout)
 		s.cancel = append(s.cancel, cancel)
@@ -134,6 +136,11 @@ func (s *Session) Close() {
 	if f := s.BeforeClose; f != nil {
 		s.BeforeClose = nil
 		f()
+	}
+	// A graceful close lets Chrome write its cookies and site storage to
+	// the profile; the cancel funcs alone kill the process first.
+	if s.browser != nil {
+		_ = chromedp.Cancel(s.browser)
 	}
 	for i := len(s.cancel) - 1; i >= 0; i-- {
 		s.cancel[i]()
