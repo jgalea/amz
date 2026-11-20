@@ -44,6 +44,7 @@ type Quote struct {
 	SoldBy       string   `json:"sold_by,omitempty"`
 	ShipsFrom    string   `json:"ships_from,omitempty"`
 	Prime        bool     `json:"prime,omitempty"`
+	ForeignPrice bool     `json:"foreign_price,omitempty"`
 	// Matched says how the ASIN was found on this storefront when it is
 	// not the one asked for: "ean" or "title".
 	Matched  string           `json:"matched,omitempty"`
@@ -106,6 +107,14 @@ func fill(q *Quote, p product.Product, sf market.Storefront, country string) {
 	q.Warnings = append(q.Warnings, p.Warnings...)
 	if w := destinationWarning(p.DeliveryDestination, p.DestinationType, sf, country); w != "" {
 		q.Warnings = append(q.Warnings, w)
+		// A page priced for a country outside the storefront's currency
+		// can show the amount in that country's currency with no code
+		// (221.820 for a Chilean delivery), and the storefront fallback
+		// would read it as euros.
+		if p.Price > 0 && product.CurrencyOf(p.PriceText, "") == "" {
+			q.ForeignPrice = true
+			q.Warnings = append(q.Warnings, "the price shows no currency and the page was priced for "+p.DeliveryDestination+", so it may be in that country's currency; not converted")
+		}
 	} else if p.DeliveryDestination == "" {
 		q.Warnings = append(q.Warnings, "could not read the delivery destination, so the price is unanchored")
 	}
@@ -218,7 +227,7 @@ func Compare(asin string, sfs []market.Storefront, o Options) Comparison {
 	for i := range cmp.Quotes {
 		q := &cmp.Quotes[i]
 		cmp.Checked++
-		if q.Price == 0 {
+		if q.Price == 0 || q.ForeignPrice {
 			continue
 		}
 		if table != nil {
