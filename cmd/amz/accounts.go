@@ -236,14 +236,27 @@ func statusCmd(args []string) error {
 	}
 	out["jar_signed_in"] = jar.SignedIn
 	if live {
-		s, err := pull.Session(acct, !c.show, 90*time.Second)
+		check := func(headless bool) (bool, error) {
+			s, err := pull.Session(acct, headless, 90*time.Second)
+			if err != nil {
+				return false, err
+			}
+			defer s.Close()
+			return amazon.LoggedIn(s.Ctx, site)
+		}
+		ok, err := check(!c.show)
 		if err != nil {
 			return err
 		}
-		defer s.Close()
-		ok, err := amazon.LoggedIn(s.Ctx, site)
-		if err != nil {
-			return err
+		// A headless browser is sometimes sent to the sign-in page while
+		// the same profile in a visible window is still signed in, and the
+		// visible pass brings the headless one back. Check once that way
+		// before calling the account signed out.
+		if !ok && !c.show {
+			if ok, err = check(false); err != nil {
+				return err
+			}
+			out["revived_in_window"] = ok
 		}
 		out["signed_in"] = ok
 		if alert && !ok {
@@ -290,6 +303,9 @@ func statusCmd(args []string) error {
 	if v, ok := out["signed_in"].(bool); ok {
 		if v {
 			state = "signed in (checked live)"
+			if r, _ := out["revived_in_window"].(bool); r {
+				state = "signed in (checked live, after a visible-window pass)"
+			}
 		} else {
 			state = "signed out (checked live)"
 		}
