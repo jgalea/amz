@@ -99,6 +99,17 @@ amz buywith B0TEST0001
 
 `buywith` reads the product through each of your accounts and ranks them by effective cost: the ex-VAT price for a business account that reclaims VAT, the shelf price otherwise (`--no-reclaim` when the purchase is not deductible).
 
+## Is it a real deal
+
+```
+amz deal B0TEST0001 --markets es,de,fr,it --json
+amz deal B0TEST0001 --account business
+```
+
+`deal` answers whether a price is a real deal and which storefront is cheapest for where you take delivery, as JSON an agent can act on (`--json`, or the `deal` MCP tool; a table is the default at the terminal). Per storefront it returns the current price in EUR, the destination Amazon priced the page for, availability, seller and list price; Amazon's own "lowest price in the last 30 days" where the page shows one (read in Spanish, German, French, Italian and English); and Camel's one-year lowest, highest and current price with dates. Camel only publishes those in the chart legend, so `amz` reads the PNG with `tesseract` (install it, for example `brew install tesseract`; it is found on `PATH`). Keepa's graph is saved and its path returned; its numbers need a paid key, so none are read. With `--account` the price your signed-in account is shown is added, read-only. Every price seen is recorded in the local store, and the min and max you have observed over the past year come back per storefront.
+
+The verdict holds `cheapest_store` (only among pages priced for your delivery destination), `current_vs_30d_low_pct`, `current_vs_1y_low_pct`, `at_1y_low` (within 2% of, or below, the one-year low) and a one-line `summary`. A signal that could not be evaluated is `null` with a `*_reason` beside it, never 0: no tesseract, a chart OCR could not read, no discount so no 30-day low, no history for the ASIN.
+
 ## After the purchase
 
 ```
@@ -159,7 +170,7 @@ A watch fires when the lowest converted price across its storefronts (used offer
 
 ## MCP server
 
-`amz mcp` serves the read commands as tools over stdio (Model Context Protocol), so an agent can ask for a price, an order, a warranty or the account's health the same way you do: `price`, `search`, `history`, `reviews`, `seller`, `buywith`, `orders`, `warranty`, `returns_window`, `audit`, `spend`, `health`, `markets`. `return prepare` is not exposed. With Claude Code:
+`amz mcp` serves the read commands as tools over stdio (Model Context Protocol), so an agent can ask for a price, an order, a warranty or the account's health the same way you do: `price`, `deal`, `search`, `history`, `reviews`, `seller`, `buywith`, `orders`, `warranty`, `returns_window`, `audit`, `spend`, `health`, `markets`. `return prepare` is not exposed. With Claude Code:
 
 ```
 claude mcp add --scope user amz -- amz mcp
