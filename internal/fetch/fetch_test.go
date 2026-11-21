@@ -31,8 +31,15 @@ func TestPlottedChart(t *testing.T) {
 func TestChartURL(t *testing.T) {
 	es, _ := market.Get("es")
 	u, err := ChartURL("b09b94956p", es, "", "1y")
-	if err != nil || u != "https://charts.camelcamelcamel.com/es/B09B94956P/amazon.png?force=1&zero=0&w=1710&h=1026&desired=false&legend=1&ilt=1&tp=1y&fo=0&lang=en" {
+	if err != nil || u != "https://charts.camelcamelcamel.com/es/B09B94956P/amazon-new.png?force=1&zero=0&w=1710&h=1026&desired=false&legend=1&ilt=1&tp=1y&fo=0&lang=en" {
 		t.Errorf("url = %q, %v", u, err)
+	}
+	u, err = ChartURL("B09B94956P", es, "new, used", "all")
+	if err != nil || !strings.Contains(u, "/B09B94956P/new-used.png?") {
+		t.Errorf("url = %q, %v", u, err)
+	}
+	if _, err := ChartURL("B09B94956P", es, "amazon,warehouse", "all"); err == nil {
+		t.Error("unknown price type accepted")
 	}
 	nl, _ := market.Get("nl")
 	if _, err := ChartURL("B09B94956P", nl, "", ""); err == nil {

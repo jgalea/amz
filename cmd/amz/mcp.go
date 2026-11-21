@@ -106,8 +106,8 @@ func mcpTools() []mcp.Tool {
 		},
 		{
 			Name:        "history",
-			Description: "Download the CamelCamelCamel price-history chart for a product; the legend in the PNG carries the lowest, highest and current price with dates. Returns the file path.",
-			Schema:      mcp.Schema(map[string]any{"asin": asinProp, "market": marketProp, "period": mcp.Str("all, 1y, 6m, 3m or 1m")}, "asin"),
+			Description: "Download the CamelCamelCamel price-history chart for a product; the legend in the PNG carries the lowest, highest and current price with dates, one row per price type. Returns the file path.",
+			Schema:      mcp.Schema(map[string]any{"asin": asinProp, "market": marketProp, "prices": mcp.Str("comma-separated series: amazon (sold by Amazon), new (third-party new), used; default amazon,new"), "period": mcp.Str("1y (default), 6m, 3m, 1m, or all for the full history")}, "asin"),
 			Run: func(ctx context.Context, args map[string]any) (any, error) {
 				asin, err := mcpAsin(args)
 				if err != nil {
@@ -123,10 +123,10 @@ func mcpTools() []mcp.Tool {
 				}
 				period := mcp.String(args, "period")
 				if period == "" {
-					period = "all"
+					period = "1y"
 				}
 				dest := filepath.Join(config.Dir(), "charts", fmt.Sprintf("%s-%s-%s.png", asin, sf.Code, period))
-				ok, err := fetch.Chart(asin, sf, dest, period)
+				ok, err := fetch.Chart(asin, sf, dest, mcp.String(args, "prices"), period)
 				if err != nil {
 					return nil, err
 				}

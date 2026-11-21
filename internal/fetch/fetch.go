@@ -193,14 +193,27 @@ func Detail(asin string, sf market.Storefront, refresh bool) (Page, error) {
 // ASIN. Camel's HTML pages sit behind a Cloudflare challenge, but the
 // chart renderer is open, and with legend=1 the image carries the exact
 // lowest, highest and current price with dates, so the PNG is the data.
-// period is one of all, 1y, 6m, 3m, 1m.
-func ChartURL(asin string, sf market.Storefront, source, period string) (string, error) {
+// prices picks the series: amazon (sold by Amazon), new (third-party
+// new) and used, comma-separated; "" means amazon,new, because a brand
+// selling direct has no Amazon series at all. period is one of all, 1y,
+// 6m, 3m, 1m.
+func ChartURL(asin string, sf market.Storefront, prices, period string) (string, error) {
 	if sf.Camel == "" {
 		return "", fmt.Errorf("CamelCamelCamel does not cover amazon.%s", sf.Code)
 	}
-	if source == "" {
-		source = "amazon"
+	if prices == "" {
+		prices = "amazon,new"
 	}
+	var series []string
+	for _, p := range strings.Split(prices, ",") {
+		switch p = strings.TrimSpace(p); p {
+		case "amazon", "new", "used":
+			series = append(series, p)
+		default:
+			return "", fmt.Errorf("prices must be amazon, new or used, not %q", p)
+		}
+	}
+	source := strings.Join(series, "-")
 	if period == "" {
 		period = "all"
 	}
@@ -234,8 +247,8 @@ func PlottedChart(content []byte) bool {
 
 // Chart downloads a price-history chart to dest. It returns false, nil
 // when Camel has no data for the ASIN.
-func Chart(asin string, sf market.Storefront, dest, period string) (bool, error) {
-	u, err := ChartURL(asin, sf, "amazon", period)
+func Chart(asin string, sf market.Storefront, dest, prices, period string) (bool, error) {
+	u, err := ChartURL(asin, sf, prices, period)
 	if err != nil {
 		return false, err
 	}

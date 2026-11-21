@@ -303,10 +303,11 @@ func savePrices(cmp price.Comparison, mine []price.AccountQuote) error {
 }
 
 func historyCmd(args []string) error {
-	c := flags("history", "ASIN|URL [--markets es] [--period all|1y|6m|3m|1m] [--out DIR]")
-	var markets, period, out string
+	c := flags("history", "ASIN|URL [--markets es] [--prices amazon,new,used] [--period 1y|6m|3m|1m|all] [--out DIR]")
+	var markets, prices, period, out string
 	c.fs.StringVar(&markets, "markets", "es", "storefronts to chart")
-	c.fs.StringVar(&period, "period", "all", "all, 1y, 6m, 3m, 1m")
+	c.fs.StringVar(&prices, "prices", "amazon,new", "series to chart: amazon, new (third-party new), used")
+	c.fs.StringVar(&period, "period", "1y", "1y (default), 6m, 3m, 1m, or all for the full history")
 	c.fs.StringVar(&out, "out", filepath.Join(config.Dir(), "charts"), "where to save the PNGs")
 	if err := c.parse(args); err != nil {
 		return err
@@ -330,7 +331,7 @@ func historyCmd(args []string) error {
 	saved := false
 	for _, sf := range sfs {
 		r := chart{Market: sf.Code}
-		u, err := fetch.ChartURL(asin, sf, "amazon", period)
+		u, err := fetch.ChartURL(asin, sf, prices, period)
 		if err != nil {
 			r.Error = err.Error()
 			results = append(results, r)
@@ -338,7 +339,7 @@ func historyCmd(args []string) error {
 		}
 		r.URL = u
 		dest := filepath.Join(out, fmt.Sprintf("%s-%s-%s.png", asin, sf.Code, period))
-		ok, err := fetch.Chart(asin, sf, dest, period)
+		ok, err := fetch.Chart(asin, sf, dest, prices, period)
 		switch {
 		case err != nil:
 			r.Error = err.Error()
