@@ -228,3 +228,20 @@ func TestCurrencyOf(t *testing.T) {
 		}
 	}
 }
+
+func TestParseNoFeaturedOffer(t *testing.T) {
+	raw, err := os.ReadFile("testdata/it_dp_no_featured_offer.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := Parse(string(raw), "B0DX1KBTHG", "it", "https://www.amazon.it/dp/B0DX1KBTHG", "EUR")
+	if p.Price != 0 {
+		t.Errorf("price = %v, want none", p.Price)
+	}
+	if !strings.Contains(p.Unavailable, "no featured offer") {
+		t.Errorf("unavailable = %q", p.Unavailable)
+	}
+	if p.DeliveryDestination != "Portogallo" || !p.SignedOut {
+		t.Errorf("destination = %q signedOut = %v", p.DeliveryDestination, p.SignedOut)
+	}
+}
