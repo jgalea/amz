@@ -274,7 +274,10 @@ func Parse(html, asin, mkt, url, currency string) Product {
 		if stated == "" {
 			stated = text(doc.Find("#buybox .a-color-price"))
 		}
-		if stated != "" {
+		if stated == "" && doc.Find("#unqualifiedBuyBox_feature_div").Length() > 0 {
+			p.Unavailable = "no featured offer for this delivery address: Amazon lists no buy box price and only \"see all buying options\""
+			p.Warnings = append(p.Warnings, "no buy box offer on the page; other offers may exist under \"see all buying options\"")
+		} else if stated != "" {
 			p.Unavailable = firstSentence(stated, 160)
 			p.Warnings = append(p.Warnings, "no price; Amazon states: "+firstSentence(stated, 90))
 		} else {

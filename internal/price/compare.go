@@ -122,6 +122,8 @@ func fill(q *Quote, p product.Product, sf market.Storefront, country string) {
 		q.Error = p.Unavailable
 		if q.Error == "" {
 			q.Error = "listed, but no price could be read from the page"
+		} else if p.SignedOut {
+			q.Error += "; this anonymous check is priced for the country only and can differ from what your signed-in account is shown, notably for merchant-fulfilled offers: run with --session to check"
 		}
 	}
 }
