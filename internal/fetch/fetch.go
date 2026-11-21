@@ -252,29 +252,38 @@ func Chart(asin string, sf market.Storefront, dest, prices, period string) (bool
 	if err != nil {
 		return false, err
 	}
-	throttle("charts.camelcamelcamel.com")
+	body, err := getImage(u, "camel")
+	if err != nil || !PlottedChart(body) {
+		return false, err
+	}
+	return true, writeFile(dest, body)
+}
+
+func getImage(u, name string) ([]byte, error) {
+	pu, err := url.Parse(u)
+	if err != nil {
+		return nil, err
+	}
+	throttle(pu.Host)
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	req.Header.Set("User-Agent", userAgent)
 	resp, err := client.Do(req)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 || !strings.HasPrefix(resp.Header.Get("Content-Type"), "image") {
-		return false, fmt.Errorf("camel: HTTP %d, %s", resp.StatusCode, resp.Header.Get("Content-Type"))
+		return nil, fmt.Errorf("%s: HTTP %d, %s", name, resp.StatusCode, resp.Header.Get("Content-Type"))
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 20<<20))
-	if err != nil {
-		return false, err
-	}
-	if !PlottedChart(body) {
-		return false, nil
-	}
+	return io.ReadAll(io.LimitReader(resp.Body, 20<<20))
+}
+
+func writeFile(dest string, body []byte) error {
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
-		return false, err
+		return err
 	}
-	return true, os.WriteFile(dest, body, 0o644)
+	return os.WriteFile(dest, body, 0o644)
 }

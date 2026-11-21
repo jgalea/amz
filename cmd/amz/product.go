@@ -303,9 +303,10 @@ func savePrices(cmp price.Comparison, mine []price.AccountQuote) error {
 }
 
 func historyCmd(args []string) error {
-	c := flags("history", "ASIN|URL [--markets es] [--prices amazon,new,used] [--period 1y|6m|3m|1m|all] [--out DIR]")
-	var markets, prices, period, out string
+	c := flags("history", "ASIN|URL [--markets es] [--source camel,keepa] [--prices amazon,new,used] [--period 1y|6m|3m|1m|all] [--out DIR]")
+	var markets, sources, prices, period, out string
 	c.fs.StringVar(&markets, "markets", "es", "storefronts to chart")
+	c.fs.StringVar(&sources, "source", "camel,keepa", "chart sources: camel (legend with lowest/highest), keepa (fresher, catches short deals)")
 	c.fs.StringVar(&prices, "prices", "amazon,new", "series to chart: amazon, new (third-party new), used")
 	c.fs.StringVar(&period, "period", "1y", "1y (default), 6m, 3m, 1m, or all for the full history")
 	c.fs.StringVar(&out, "out", filepath.Join(config.Dir(), "charts"), "where to save the PNGs")
@@ -320,51 +321,83 @@ func historyCmd(args []string) error {
 	if err != nil {
 		return err
 	}
-	fetch.MinDelay = c.delay
-	type chart struct {
-		Market string `json:"market"`
-		Path   string `json:"path,omitempty"`
-		URL    string `json:"url,omitempty"`
-		Error  string `json:"error,omitempty"`
+	srcs, err := chartSources(sources)
+	if err != nil {
+		return err
 	}
-	var results []chart
+	fetch.MinDelay = c.delay
+	var results []chartResult
 	saved := false
 	for _, sf := range sfs {
-		r := chart{Market: sf.Code}
-		u, err := fetch.ChartURL(asin, sf, prices, period)
-		if err != nil {
-			r.Error = err.Error()
+		for _, src := range srcs {
+			r := saveChart(asin, sf, src, prices, period, out)
+			saved = saved || r.Path != ""
 			results = append(results, r)
-			continue
 		}
-		r.URL = u
-		dest := filepath.Join(out, fmt.Sprintf("%s-%s-%s.png", asin, sf.Code, period))
-		ok, err := fetch.Chart(asin, sf, dest, prices, period)
-		switch {
-		case err != nil:
-			r.Error = err.Error()
-		case !ok:
-			r.Error = "no history tracked for this ASIN"
-		default:
-			r.Path, saved = dest, true
-		}
-		results = append(results, r)
 	}
 	if c.asJSON {
 		return emitJSON(map[string]any{"asin": asin, "charts": results})
 	}
 	for _, r := range results {
 		if r.Path != "" {
-			fmt.Printf("saved   %-6s %s\n", r.Market, r.Path)
+			fmt.Printf("saved   %-6s %-6s %s\n", r.Market, r.Source, r.Path)
 		} else {
-			fmt.Printf("skipped %-6s %s\n", r.Market, r.Error)
+			fmt.Printf("skipped %-6s %-6s %s\n", r.Market, r.Source, r.Error)
 		}
 	}
 	if !saved {
 		return fmt.Errorf("no chart saved")
 	}
-	fmt.Println("The chart legend carries lowest, highest and current price with dates; read the PNG to get them.")
+	fmt.Println("Camel's legend carries lowest, highest and current price with dates; Keepa's chart shows the current price and catches short deals Camel misses. Read the PNGs.")
 	return nil
+}
+
+type chartResult struct {
+	Market string `json:"market"`
+	Source string `json:"source"`
+	Path   string `json:"path,omitempty"`
+	URL    string `json:"url,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
+func chartSources(list string) ([]string, error) {
+	var out []string
+	for _, s := range strings.Split(list, ",") {
+		switch s = strings.TrimSpace(s); s {
+		case "camel", "keepa":
+			out = append(out, s)
+		default:
+			return nil, fmt.Errorf("source must be camel or keepa, not %q", s)
+		}
+	}
+	return out, nil
+}
+
+func saveChart(asin string, sf market.Storefront, src, prices, period, out string) chartResult {
+	r := chartResult{Market: sf.Code, Source: src}
+	urlFn, getFn := fetch.ChartURL, fetch.Chart
+	if src == "keepa" {
+		urlFn, getFn = fetch.KeepaChartURL, fetch.KeepaChart
+	}
+	u, err := urlFn(asin, sf, prices, period)
+	if err != nil {
+		r.Error = err.Error()
+		return r
+	}
+	if src == "camel" {
+		r.URL = u
+	}
+	dest := filepath.Join(out, fmt.Sprintf("%s-%s-%s-%s.png", asin, sf.Code, period, src))
+	ok, err := getFn(asin, sf, dest, prices, period)
+	switch {
+	case err != nil:
+		r.Error = err.Error()
+	case !ok:
+		r.Error = "no history tracked for this ASIN"
+	default:
+		r.Path = dest
+	}
+	return r
 }
 
 func reviewsCmd(args []string) error {

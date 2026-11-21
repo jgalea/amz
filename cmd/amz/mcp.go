@@ -106,8 +106,8 @@ func mcpTools() []mcp.Tool {
 		},
 		{
 			Name:        "history",
-			Description: "Download the CamelCamelCamel price-history chart for a product; the legend in the PNG carries the lowest, highest and current price with dates, one row per price type. Returns the file path.",
-			Schema:      mcp.Schema(map[string]any{"asin": asinProp, "market": marketProp, "prices": mcp.Str("comma-separated series: amazon (sold by Amazon), new (third-party new), used; default amazon,new"), "period": mcp.Str("1y (default), 6m, 3m, 1m, or all for the full history")}, "asin"),
+			Description: "Download price-history charts for a product. Camel's legend prints lowest, highest and current price with dates; Keepa's chart is fresher and catches short deals Camel misses. Returns the file paths; read the PNGs.",
+			Schema:      mcp.Schema(map[string]any{"asin": asinProp, "market": marketProp, "source": mcp.Str("comma-separated: camel, keepa; default both"), "prices": mcp.Str("comma-separated series: amazon (sold by Amazon), new (third-party new), used; default amazon,new"), "period": mcp.Str("1y (default), 6m, 3m, 1m, or all for the full history")}, "asin"),
 			Run: func(ctx context.Context, args map[string]any) (any, error) {
 				asin, err := mcpAsin(args)
 				if err != nil {
@@ -125,15 +125,19 @@ func mcpTools() []mcp.Tool {
 				if period == "" {
 					period = "1y"
 				}
-				dest := filepath.Join(config.Dir(), "charts", fmt.Sprintf("%s-%s-%s.png", asin, sf.Code, period))
-				ok, err := fetch.Chart(asin, sf, dest, mcp.String(args, "prices"), period)
+				sources := mcp.String(args, "source")
+				if sources == "" {
+					sources = "camel,keepa"
+				}
+				srcs, err := chartSources(sources)
 				if err != nil {
 					return nil, err
 				}
-				if !ok {
-					return map[string]any{"asin": asin, "market": sf.Code, "error": "no history tracked for this ASIN"}, nil
+				var charts []chartResult
+				for _, src := range srcs {
+					charts = append(charts, saveChart(asin, sf, src, mcp.String(args, "prices"), period, filepath.Join(config.Dir(), "charts")))
 				}
-				return map[string]any{"asin": asin, "market": sf.Code, "path": dest, "note": "read the PNG: the legend prints lowest, highest and current price with dates"}, nil
+				return map[string]any{"asin": asin, "market": sf.Code, "charts": charts}, nil
 			},
 		},
 		{
