@@ -272,7 +272,12 @@ func getImage(u, name string) ([]byte, error) {
 	req.Header.Set("User-Agent", userAgent)
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		// the URL can carry an access key, so keep it out of the error
+		var ue *url.Error
+		if errors.As(err, &ue) {
+			return nil, fmt.Errorf("%s: %v", name, ue.Err)
+		}
+		return nil, fmt.Errorf("%s: request failed", name)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 || !strings.HasPrefix(resp.Header.Get("Content-Type"), "image") {
